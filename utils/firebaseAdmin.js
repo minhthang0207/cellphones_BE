@@ -1,7 +1,7 @@
 const admin = require("firebase-admin");
 const path = require("path");
 
-const firebase_config = 
+const serviceAccount = 
 {
   "type": process.env.FIREBASE_TYPE,
   "project_id": process.env.FIREBASE_PROJECT_ID,
@@ -16,10 +16,10 @@ const firebase_config =
   "universe_domain": process.env.FIREBASE_UNIVERSE_DOMAIN
 }
 // Cấu hình Firebase Admin SDK
-const serviceAccount = require(path.resolve(
-  __dirname,
-  firebase_config
-));
+// const serviceAccount = require(path.resolve(
+//   __dirname,
+//   firebase_config
+// ));
 
 
 

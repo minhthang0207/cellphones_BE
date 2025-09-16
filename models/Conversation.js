@@ -32,6 +32,7 @@ const Conversation = sequelize.define(
     },
   },
   {
+    tableName: "conversation",
     timestamps: true,
   }
 );
