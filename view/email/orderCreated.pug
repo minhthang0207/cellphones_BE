@@ -1,0 +1,80 @@
+doctype html
+html
+    head
+        meta(name='viewport', content='width=device-width')
+        meta(http-equiv='Content-Type', content='text/html; charset=UTF-8')
+        title= subject
+        style.
+            body {
+                font-family: Arial, sans-serif;
+                background-color: #f7f7f7;
+                margin: 0;
+                padding: 0;
+            }
+            .container {
+                max-width: 600px;
+                margin: 20px auto;
+                background: #ffffff;
+                padding: 20px;
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
+            }
+            .header {
+                text-align: center;
+                margin-bottom: 20px;
+            }
+            .header h1 {
+                color: #333333;
+            }
+            .details {
+                margin-bottom: 20px;
+            }
+            .details p {
+                margin: 5px 0;
+                color: #555555;
+            }
+            .item {
+                border-bottom: 1px solid #e0e0e0;
+                padding: 10px 0;
+            }
+            .item:last-child {
+                border-bottom: none;
+            }
+            .footer {
+                margin-top: 20px;
+                text-align: center;
+                color: #999999;
+                font-size: 12px;
+            }
+    body
+        table.body(role='presentation', border='0', cellpadding='0', cellspacing='0', width='100%')
+            tbody
+                tr
+                    td.container
+                        .content
+                            // HEADER
+                            .header
+                                h1 Cảm ơn bạn đã đặt hàng tại CellphoneS!
+                                p Mã đơn hàng: #{data.id}
+                            // ORDER DETAILS
+                            .details
+                                p Ngày đặt hàng: #{new Date(data.order_date).toLocaleDateString('vi-VN')}
+                                p Trạng thái: #{data.status}
+                                p Phương thức thanh toán: #{data.payment_method}
+                                p Trạng thái thanh toán: #{data.payment_status}
+                                p Tổng tiền: #{data.total_amount.toLocaleString('vi-VN')} VND
+                            // ORDER ITEMS
+                            h2 Sản phẩm trong đơn hàng
+                            each item in data.items
+                                .item
+                                    h3= item.Variant.Product.name
+                                    p= `Phiên bản: ${item.Variant.name}`
+                                    p Số lượng: #{item.quantity}
+                                    p Giá: #{item.origin_price.toLocaleString('vi-VN')} VND
+                                    p Màu sắc: #{item.Variant.Color.name}
+                                    img(src=item.Variant.Product.image, alt=item.Variant.Product.name, style='width: 100px; height: auto;')
+                            // FOOTER
+                            .footer
+                                p 350-352 Võ Văn Kiệt, Phường Cô Giang, Quận 1, Thành phố Hồ Chí Minh, Việt Nam
+                                p Nếu bạn không quan tâm email, vui lòng 
+                                    a(href='#') bỏ đăng ký
