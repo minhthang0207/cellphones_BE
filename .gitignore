@@ -1,5 +1,10 @@
 # env files (can opt-in for committing if needed)
-.env*
+
+# env files (can opt-in for committing if needed)
+# Ignore tất cả file env
+.env
+.env.local
+.env.*.local
 
 # dependencies
 /node_modules
