@@ -16,6 +16,15 @@ const router = express.Router();
 // Route mới để tìm kiếm sản phẩm theo slug
 router.route("/slug/:slug").get(productController.getProductBySlug);
 
+router
+  .route("/top-30-outstanding")
+  .get(
+    productController.aliasTopOutstandingProduct,
+    productController.getAllProduct
+  );
+
+router.get("/landing", productController.getLandingProducts)
+
 // ---------Hình ảnh-------------
 // Thêm danh sách hình ảnh vào sản phẩm
 router.use("/:productId/images", productImageRoutes);
@@ -25,13 +34,6 @@ router.use("/:productId/variants", variantRoutes);
 
 // Thêm bình luận vào sản phẩm
 router.use("/:productId/reviews", reviewRoutes);
-
-router
-  .route("/top-30-outstanding")
-  .get(
-    productController.aliasTopOutstandingProduct,
-    productController.getAllProduct
-  );
 
 router
   .route("/")

@@ -13,11 +13,53 @@ const Color = require("../models/Color");
 const Ram = require("../models/Ram");
 const Rom = require("../models/Rom");
 
+// Lấy thông tin các sản phẩm trong landingpage
+exports.getLandingProducts = catchAsync(async (req, res, next) => {
+  // Dùng lại getAllProduct logic bằng cách gọi thẳng APIFeaturesSequelize
+  const outstanding = await new APIFeaturesSequelize(Product, { sort: "-average_rating", limit: 30 })
+    .filter()
+    .sort()
+    .limitFields()
+    .paginate()
+    .apply();
+
+  const tablets = await new APIFeaturesSequelize(Product, { categorySlug: "may-tinh-bang", limit: 20 })
+    .filter()
+    .sort()
+    .limitFields()
+    .paginate()
+    .apply();
+
+  const laptops = await new APIFeaturesSequelize(Product, { categorySlug: "laptop", limit: 20 })
+    .filter()
+    .sort()
+    .limitFields()
+    .paginate()
+    .apply();
+
+  const phones = await new APIFeaturesSequelize(Product, { categorySlug: "dien-thoai", limit: 20 })
+    .filter()
+    .sort()
+    .limitFields()
+    .paginate()
+    .apply();
+
+  res.status(200).json({
+    status: "success",
+    data: {
+      outstanding,
+      tablets,
+      laptops,
+      phones,
+    },
+  });
+});
+
 // upload 1 hình ảnh
 exports.uploadSingleImage = upload.single("product_image");
 
 // Hàm upload hình ảnh lên Firebase Storage
-const uploadImage = async (file, name) => {
+const uploadImage = catchAsync(async (file, name) => {
   const blob = bucket.file(`${name}/${Date.now()}_${file.originalname}`);
   const blobStream = blob.createWriteStream({
     metadata: {
@@ -38,7 +80,7 @@ const uploadImage = async (file, name) => {
     blobStream.on("error", reject);
     blobStream.end(file.buffer);
   });
-};
+});
 
 exports.createProduct = catchAsync(async (req, res, next) => {
   try {

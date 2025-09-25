@@ -5,6 +5,37 @@ const Message = require("../models/Message"); // Mô hình tin nhắn
 const User = require("../models/User"); // Mô hình người dùng
 const { Op, Sequelize } = require("sequelize");
 
+// Route để lấy số lượng tin nhắn chưa đọc được gửi từ admin(user)
+exports.getUnreadCountFromAdminToUser = async (req, res, next) => {
+  try {
+    const conversation = await Conversation.findOne({
+      where: { 
+        user1_id: req.user.id,
+      }
+    });
+
+    if(!conversation) {
+      res.status(404).json({
+        message: "Không tìm thấy đoạn hội thoại!"
+      });
+      return;
+    }
+    const unreadCount = await Message.count({
+      where: {
+        conversation_id: conversation.id,
+        isRead: 0,
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      unreadCount,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 //Lấy tin nhắn giữa user và admin
 exports.getMessageBetweenAdminAndUser = async (req, res, next) => {
   const { adminId, conversationId } = req.params;
@@ -200,16 +231,3 @@ exports.sendMessage = async (req, res, next) => {
     next(error);
   }
 };
-
-// Đánh dấu các tin nhắn là đã đọc
-exports.markAsRead = async (req, res, next) => {
-  const { conversationId } = req.body;
-
-  try {
-    await Message.update({ isRead: true }, { where: { conversationId } });
-    res.status(200).json({ message: "Messages marked as read" });
-  } catch (error) {
-    next(error);
-  }
-};
-``

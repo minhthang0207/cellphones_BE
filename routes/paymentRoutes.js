@@ -8,6 +8,10 @@ const router = express.Router();
 
 // AUTHENTICATE JWT
 router.use(authenticateJWT);
+router.get("/query-order/:id", paymentController.getOrderStatus)
+
+router.get("/query-refund/:mRefundId", paymentController.getRefundStatus)
+router.post("/refund", paymentController.refundOrder)
 router
   .route("/")
   //   .get(colorController.getAllColor)

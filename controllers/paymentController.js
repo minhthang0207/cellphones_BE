@@ -1,8 +1,10 @@
 const { default: axios } = require("axios");
+const qs = require("qs");
 const Brand = require("../models/Brand");
 const AppError = require("../utils/appError");
 const catchAsync = require("../utils/catchAsync");
 const CryptoJS = require("crypto-js"); // npm install crypto-js
+const crypto = require("crypto");
 const moment = require("moment"); // npm install moment
 const sequelize = require("../config/database");
 const Variant = require("../models/Variant");
@@ -22,12 +24,131 @@ const config = {
   key2: "kLtgPl8HHhfvMuDHPwKfgfsY4Ydm9eIz",
   endpoint: "https://sb-openapi.zalopay.vn/v2/create",
 };
+
+exports.getRefundStatus = catchAsync(async (req, res, next) => {
+  const m_refund_id = req.params.mRefundId;
+  const timestamp = Date.now();
+  console.log(m_refund_id)
+
+  console.log(typeof(m_refund_id));
+
+  const body = {
+    app_id: config.app_id,
+    m_refund_id,
+    timestamp
+  };
+
+  const hmacInput = config.app_id +
+    "|" +
+    body.m_refund_id + 
+    "|" +
+    body.timestamp
+
+  body.mac = CryptoJS.HmacSHA256(hmacInput, config.key1).toString(CryptoJS.enc.Hex);
+
+  try {
+    const response = await axios.post(
+      "https://sb-openapi.zalopay.vn/v2/query_refund",
+      qs.stringify(body), // convert sang x-www-form-urlencoded
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      }
+    );
+
+    res.json(response.data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+exports.refundOrder = catchAsync(async (req, res, next) => {
+  const { zp_trans_id, amount, description } = req.body;
+
+  const m_refund_id = `${moment().format("YYMMDD")}_${config.app_id}_1`;
+  const timestamp = Date.now();
+
+  const data = `${config.app_id}|${zp_trans_id}|${amount}|${description}|${timestamp}`;
+
+  const mac = CryptoJS.HmacSHA256(data, config.key1).toString(CryptoJS.enc.Hex);
+  // const mac = CryptoJS.HmacSHA256(data, config.key1).toString();
+  
+  const body = {
+    app_id: config.app_id,
+    m_refund_id,
+    zp_trans_id,
+    amount,
+    timestamp,
+    description,
+    mac,
+  };
+
+  console.log(body)
+
+  try {
+    const response = await axios.post(
+      "https://sb-openapi.zalopay.vn/v2/refund",
+      qs.stringify(body), // convert sang x-www-form-urlencoded
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      }
+    );
+  // const response = await axios.post("https://sb-openapi.zalopay.vn/v2/refund", null, { params: body });
+
+
+    res.json(response.data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+exports.getOrderStatus = catchAsync(async (req, res, next) => {
+  const app_trans_id = req.params.id;
+  console.log(app_trans_id)
+
+  const body = {
+    app_id: config.app_id,
+    app_trans_id,
+  };
+
+  const hmacInput = config.app_id +
+    "|" +
+    body.app_trans_id + 
+    "|" +
+    config.key1
+
+  body.mac = CryptoJS.HmacSHA256(hmacInput, config.key1).toString(CryptoJS.enc.Hex);
+
+  console.log(body)
+
+  try {
+    const response = await axios.post(
+      "https://sb-openapi.zalopay.vn/v2/query",
+      qs.stringify(body), // convert sang x-www-form-urlencoded
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      }
+    );
+
+    res.json(response.data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 exports.createPayment = catchAsync(async (req, res, next) => {
   const { items, totalAmount, userId, orderId } = req.body;
   const embed_data = {
     // redirecturl: "https://cellphones-self.vercel.app/lich-su-mua-hang",
     redirecturl: `${process.env.FRONTEND_URL}/lich-su-mua-hang`,
   };
+
 
   const transID = Math.floor(Math.random() * 1000000);
   const order = {
@@ -41,6 +162,8 @@ exports.createPayment = catchAsync(async (req, res, next) => {
     description: `Thanh toán cho đơn hàng #${orderId}`,
     bank_code: "",
     callback_url: `${process.env.BACKEND_URL}/api/callback`,
+    // callback_url: `https://563c31bab3ab.ngrok-free.app/api/callback`,
+    
   };
 
   // appid|app_trans_id|appuser|amount|apptime|embeddata|item
@@ -60,6 +183,8 @@ exports.createPayment = catchAsync(async (req, res, next) => {
     order.item;
   order.mac = CryptoJS.HmacSHA256(data, config.key1).toString();
 
+  console.log({order})
+
   const result = await axios.post(config.endpoint, null, { params: order });
 
   res.status(200).json({
@@ -70,6 +195,7 @@ exports.createPayment = catchAsync(async (req, res, next) => {
 
 exports.callback = catchAsync(async (req, res, next) => {
   let result = {};
+  console.log(JSON.parse(req.body.data))
 
   try {
     let dataStr = req.body.data;
@@ -221,3 +347,4 @@ exports.callback = catchAsync(async (req, res, next) => {
     return res.json(result); // Trả lời nếu có lỗi
   }
 });
+
