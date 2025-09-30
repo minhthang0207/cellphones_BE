@@ -22,7 +22,7 @@ const Order = sequelize.define(
           if (
             value &&
             this.order_date &&
-            new Date(value) <= new Date(this.order_date)
+            new Date(value) < new Date(this.order_date)
           ) {
             throw new Error("Delivered date must be after the order date.");
           }
@@ -56,6 +56,26 @@ const Order = sequelize.define(
         min: 0,
       },
     },
+    app_trans_id: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    zp_trans_id: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    m_refund_id: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    refund_status: {
+      type: DataTypes.ENUM("Đang xử lý", "Đã hoàn tiền", "Thất bại"),
+      allowNull: true,
+    },
+    expired_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
     user_id: {
       type: DataTypes.UUID,
       allowNull: false,
@@ -68,6 +88,16 @@ const Order = sequelize.define(
   {
     tableName: "order",
     timestamps: true,
+    hooks: {
+      beforeCreate: (order) => {
+        if (order.payment_method === "Online") {
+          const now = new Date();
+          order.expired_at = new Date(now.getTime() + 15 * 60 * 1000); // +5 phút
+        } else {
+          order.expired_at = null;
+        }
+      },
+    },
   }
 );
 

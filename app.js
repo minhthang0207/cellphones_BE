@@ -45,6 +45,9 @@ const User = require("./models/User");
 const { Op, Sequelize } = require("sequelize");
 const Conversation = require("./models/Conversation");
 
+const startOrderChecker = require("./jobs/orderChecker");
+const startRefundOrderChecker = require("./jobs/refundOrderChecker");
+
 // Serving static file
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
@@ -213,6 +216,7 @@ app.post("/api/callback", paymentController.callback);
 
 app.use(globalErrorHandler);
 
+
 // Connect Database
 const initializeDatabase = async () => {
   try {
@@ -227,6 +231,10 @@ const initializeDatabase = async () => {
 };
 
 initializeDatabase();
+
+// start cronjob (kiểm tra đơn hàng)
+startOrderChecker()
+startRefundOrderChecker();
 
 const port = process.env.PORT || 3000;
 server.listen(port, () => {

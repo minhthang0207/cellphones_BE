@@ -12,6 +12,7 @@ const Color = require("../models/Color");
 const User = require("../models/User");
 const { Sequelize, Op } = require("sequelize");
 const Email = require("../utils/email");
+const { createRefundOrder, getRefundOrderStatus } = require("./paymentController");
 
 
 const statusMapping = (value) => {
@@ -307,8 +308,11 @@ exports.updateOrder = catchAsync(async (req, res, next) => {
     // Nếu trạng thái là "Đã hủy", hoàn trả số lượng tồn kho
     if (status === "Đã hủy") {
       if (order.status !== "Chờ xác nhận") {
+        await transaction.rollback();
         return next(new AppError("Đơn hàng này không thể hủy", 400));
       }
+
+      // Cộng lại tồn kho
       const orderItems = await Order_Item.findAll({
         where: { order_id: order.id },
         transaction,
@@ -320,6 +324,14 @@ exports.updateOrder = catchAsync(async (req, res, next) => {
           { where: { id: item.variant_id }, transaction }
         );
       }
+
+      // Nếu thanh toán online thì phải gửi lại refund
+      if(order.payment_method === "Online" && order.payment_status === "Đã thanh toán") {
+        // Đánh dấu order đang hoàn tiền
+        order.refund_status = "Đang xử lý";
+        await order.save({ transaction });
+
+      } 
     }
 
     // Cập nhật trạng thái và ngày giao hàng của đơn hàng
@@ -331,6 +343,39 @@ exports.updateOrder = catchAsync(async (req, res, next) => {
 
     // Commit transaction
     await transaction.commit();
+
+    // ==========================
+    // GỌI API refund ngoài transaction
+    // ==========================
+    console.log(1)
+    if (status === "Đã hủy" && order.payment_method === "Online") {
+      try {
+        const refundResult = await createRefundOrder(order);
+
+        if (refundResult.success) {
+          await order.update({
+            m_refund_id: refundResult.m_refund_id
+          });
+
+          // Nếu muốn: gọi API kiểm tra trạng thái refund
+          const refundStatusResult = await getRefundOrderStatus(order);
+          if(refundStatusResult.success) {
+            await order.update({
+              refund_status: refundStatusResult.status
+            });
+          } else {
+            await order.update({ refund_status: "Thất bại" });
+          }
+
+        } else {
+          await order.update({ refund_status: "Thất bại" });
+        }
+      } catch (err) {
+        // Nếu API bị lỗi bất ngờ => chỉ log, không rollback DB
+        console.error("Refund API error:", err.message);
+        await order.update({ refund_status: "Thất bại" });
+      }
+    }
 
     res.status(200).json({
       status: "success",
