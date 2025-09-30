@@ -6,7 +6,7 @@ const Order = require("../models/Order");
 
 function startRefundOrderChecker() {
     // --- Cronjob 5 phút/lần ---
-    cron.schedule("*/5 * * * *", async () => {
+    cron.schedule("*/20 * * * *", async () => {
     console.log("🔄 Cronjob: Check refund status...");
 
     try {
