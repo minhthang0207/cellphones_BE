@@ -6,6 +6,7 @@ const Otp = require("../models/Otp");
 const Email = require("../utils/email");
 const crypto = require("crypto");
 const { Op } = require("sequelize");
+const { error } = require("console");
 
 // SIGN UP
 exports.signup = catchAsync(async (req, res) => {
@@ -104,7 +105,7 @@ exports.generateOTP = catchAsync(async (req, res, next) => {
 
   console.log(newOtp.dataValues)
   console.log("đang gửi mail");
-  await new Email(user, newOtp.code).sendVerifyAccount();
+  new Email(user, newOtp.code).sendVerifyAccount().catch(console.log(error));
 
   console.log("Đã gửi mail");
 

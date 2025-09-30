@@ -92,7 +92,7 @@ const Order = sequelize.define(
       beforeCreate: (order) => {
         if (order.payment_method === "Online") {
           const now = new Date();
-          order.expired_at = new Date(now.getTime() + 15 * 60 * 1000); // +5 phút
+          order.expired_at = new Date(now.getTime() + 5 * 60 * 1000); // +5 phút
         } else {
           order.expired_at = null;
         }
