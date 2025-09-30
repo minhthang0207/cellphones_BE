@@ -102,7 +102,11 @@ exports.generateOTP = catchAsync(async (req, res, next) => {
   const expiresTimeInMinute =
     newOtp.expires_at.getTime() - newOtp.createdAt.getTime();
 
+  console.log(newOtp.dataValues)
+  console.log("đang gửi mail");
   await new Email(user, newOtp.code).sendVerifyAccount();
+
+  console.log("Đã gửi mail");
 
   res.status(201).json({
     status: "success",
