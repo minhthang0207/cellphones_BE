@@ -71,7 +71,7 @@ const User = sequelize.define(
     },
     isVerify: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false,
+      defaultValue: true,
     },
   },
   {
