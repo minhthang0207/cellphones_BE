@@ -89,6 +89,7 @@ exports.getAllOrder = catchAsync(async (req, res, next) => {
     },
   });
 });
+
 exports.createOrder = catchAsync(async (req, res, next) => {
   const { items, totalAmount, paymentMethod, userId } = req.body;
 
@@ -114,34 +115,25 @@ exports.createOrder = catchAsync(async (req, res, next) => {
     });
   }
 
-  const transaction = await sequelize.transaction();
+  let transaction
   try {
+    transaction = await sequelize.transaction();
+  
     for (const item of items) {
-      const variant = await Variant.findOne({
-        where: { id: item.variant_id },
-        transaction,
-      });
-
-      if (!variant) {
-        return res.status(400).json({
-          success: false,
-          message: `Sản phẩm với ID ${item.variant_id} không tồn tại`,
-        });
-      }
-
-      if (variant.stock_quantity < item.quantity) {
-        return res.status(400).json({
-          success: false,
-          message: `Sản phẩm ${variant.name} không đủ số lượng tồn kho (${variant.stock_quantity} trong kho, yêu cầu ${item.quantity})`,
-        });
-      }
-    }
-
-    for (const item of items) {
-      await Variant.decrement(
+      const [affected] = await Variant.decrement(
         { stock_quantity: item.quantity },
-        { where: { id: item.variant_id }, transaction }
+        { 
+          where: { 
+            id: item.variant_id,
+            stock_quantity: { [Op.gte]: item.quantity }, // check đủ hàng
+          },
+          transaction,
+        }
       );
+
+      if (affected === 0) {
+        throw new AppError(`Sản phẩm ID ${item.variant_id} không đủ hàng`, 400);
+      }
     }
 
     const order = await Order.create(
@@ -169,7 +161,7 @@ exports.createOrder = catchAsync(async (req, res, next) => {
     await Cart_Item.destroy({
       where: {
         user_id: userId,
-        variant_id: variantIds,
+        variant_id: { [Op.in]: variantIds },
       },
       transaction,
     });
@@ -209,19 +201,19 @@ exports.createOrder = catchAsync(async (req, res, next) => {
       ],
     });
 
-    await new Email(userData, orderCreated).sendCreatedSuccessfullOrder();
-
-
+    new Email(userData, orderCreated).sendCreatedSuccessfullOrder().catch(console.error);
     res.status(201).json({
       status: "success",
       data: {
         order,
         orderItems,
       },
-      mesage: "Tạo mới đơn hàng thành công",
+      message: "Tạo mới đơn hàng thành công",
     });
   } catch (error) {
-    await transaction.rollback();
+    if(transaction) {
+      await transaction.rollback();
+    }
     next(error);
   }
 });

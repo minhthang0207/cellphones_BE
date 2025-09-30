@@ -6,7 +6,7 @@ const Order_Item = require("../models/Order_Item");
 const Variant = require("../models/Variant");
 
 function startOrderChecker() {
-  cron.schedule("*/20 * * * *", async () => {
+  cron.schedule("*/2 * * * *", async () => {
     console.log("Cronjob: Kiểm tra đơn hàng online hết hạn...");
     const now = new Date();
 

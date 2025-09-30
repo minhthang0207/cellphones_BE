@@ -146,8 +146,9 @@ exports.createPayment = catchAsync(async (req, res, next) => {
   let result = {};
   const { items, totalAmount, userId } = req.body;
   //TODO: create order on db
-  const transaction = await sequelize.transaction();
-    try {
+  let transaction = await sequelize.transaction();
+  try {
+      transaction = await sequelize.transaction();
       // 1. Kiểm tra tồn kho
       for (const item of items) {
         const variant = await Variant.findOne({
@@ -278,7 +279,9 @@ exports.createPayment = catchAsync(async (req, res, next) => {
       });
     }
     catch (error) {
-      await transaction.rollback();
+      if(transaction) {
+        await transaction.rollback();
+      }
       result.return_code = -1;
       result.status = "error";
       result.return_message = error.message;
