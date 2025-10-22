@@ -233,8 +233,8 @@ const initializeDatabase = async () => {
 initializeDatabase();
 
 // start cronjob (kiểm tra đơn hàng)
-startOrderChecker()
-startRefundOrderChecker();
+// startOrderChecker()
+// startRefundOrderChecker();
 
 const port = process.env.PORT || 3000;
 server.listen(port, () => {
