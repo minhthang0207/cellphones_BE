@@ -27,7 +27,7 @@ exports.getAllUsers = async (req, res, next) => {
 // Lấy thông tin của 1 user (user đăng nhập)
 exports.getUserProfile = async (req, res, next) => {
   const user = await User.findOne({
-    attributes: { exclude: ["password"] }, // Loại bỏ trường password
+    attributes: { exclude: ["password", "passwordConfirm", "passwordResetToken", "passwordResetExpires"] }, // Loại bỏ trường password
     where: { id: req.user.id },
   });
 

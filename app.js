@@ -15,9 +15,8 @@ app.use(
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"], // Allowed HTTP methods
     allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
     credentials: true, // Allow cookies or auth headers if needed
-  })
+  }),
 );
-
 
 // Router
 const userRouter = require("./routes/userRoutes");
@@ -53,7 +52,6 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-
 // Create HTTP server and integrate with Socket.IO
 const server = http.createServer(app);
 
@@ -71,7 +69,6 @@ require("./models/index");
 
 // socket.io
 io.on("connection", (socket) => {
-
   // ----------USER-----------
 
   // Người dùng tham gia vào một phòng (room) theo ID người dùng
@@ -87,19 +84,21 @@ io.on("connection", (socket) => {
 
     const admin = await User.findOne({
       where: { role: "admin" },
-      attributes: ["id", "name", "role", "avatar"]
+      attributes: ["id", "name", "role", "avatar"],
     });
 
     let receiver_id = admin.id;
 
     // Tạo mới conversation nếu chưa có
-    let conversation = await Conversation.findOne({ where: { id: conversation_id }});
-    if(!conversation.last_message_id) {
+    let conversation = await Conversation.findOne({
+      where: { id: conversation_id },
+    });
+    if (!conversation.last_message_id) {
       firstConversation = true;
     }
 
     // Đây là admin
-    if(sender_id === admin.id) {
+    if (sender_id === admin.id) {
       receiver_id = conversation.user1_id;
     }
 
@@ -114,23 +113,29 @@ io.on("connection", (socket) => {
     conversation.last_message_id = message.id;
     await conversation.save();
 
-    
-
-    if(firstConversation) {
+    if (firstConversation) {
       const newRoom = await Conversation.findOne({
         where: {
-          id: conversation.id
+          id: conversation.id,
         },
         include: [
           // user1 và user2 trong room
-          { model: User, as: "user1", attributes: ["id", "name", "role", "avatar"] },
-          { model: User, as: "user2", attributes: ["id", "name", "role", "avatar"] },
-  
+          {
+            model: User,
+            as: "user1",
+            attributes: ["id", "name", "role", "avatar"],
+          },
+          {
+            model: User,
+            as: "user2",
+            attributes: ["id", "name", "role", "avatar"],
+          },
+
           // lastMessage để show preview tin nhắn cuối
           {
             model: Message,
             as: "lastMessage",
-          }
+          },
         ],
       });
 
@@ -145,7 +150,7 @@ io.on("connection", (socket) => {
 
   // Lắng nghe sự kiện đánh dấu tin nhắn là đã đọc
   socket.on("mark_as_read", async (messageIds) => {
-  if (!Array.isArray(messageIds) || messageIds.length === 0) return;
+    if (!Array.isArray(messageIds) || messageIds.length === 0) return;
 
     const messages = await Message.findAll({ where: { id: messageIds } });
 
@@ -155,23 +160,23 @@ io.on("connection", (socket) => {
         messages.map((m) => {
           m.isRead = true;
           return m.save();
-        })
+        }),
       );
 
-    // lấy danh sách id và danh sách sender cần thông báo
-    const updatedIds = messages.map((m) => m.id);
-    const senderIds = [...new Set(messages.map((m) => m.sender_id))];
-    const receiverIds = [...new Set(messages.map((m) => m.receiver_id))];
+      // lấy danh sách id và danh sách sender cần thông báo
+      const updatedIds = messages.map((m) => m.id);
+      const senderIds = [...new Set(messages.map((m) => m.sender_id))];
+      const receiverIds = [...new Set(messages.map((m) => m.receiver_id))];
 
-    // emit cho người gửi và người nhận tin
-    senderIds.forEach((senderId) => {
-      io.to(senderId).emit("messages_read", { ids: updatedIds });
-    });
-    receiverIds.forEach((receiverId) => {
-      io.to(receiverId).emit("messages_read", { ids: updatedIds });
-    });
-  }
-});
+      // emit cho người gửi và người nhận tin
+      senderIds.forEach((senderId) => {
+        io.to(senderId).emit("messages_read", { ids: updatedIds });
+      });
+      receiverIds.forEach((receiverId) => {
+        io.to(receiverId).emit("messages_read", { ids: updatedIds });
+      });
+    }
+  });
 
   // ----------disconent-----------
   socket.on("disconnect", () => {
@@ -187,7 +192,7 @@ app.get("/", (req, res) => {
 app.use("/api/users", userRouter);
 
 // chat
-app.use("/api/chats", chatRouter)
+app.use("/api/chats", chatRouter);
 
 // atrribute
 app.use("/api/brands", brandRouter);
@@ -215,7 +220,6 @@ app.use("/api/payment", paymentRouter);
 app.post("/api/callback", paymentController.callback);
 
 app.use(globalErrorHandler);
-
 
 // Connect Database
 const initializeDatabase = async () => {

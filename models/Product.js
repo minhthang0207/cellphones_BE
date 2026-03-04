@@ -58,11 +58,15 @@ const Product = sequelize.define(
       type: DataTypes.INTEGER, // Lưu trữ số lượng đánh giá
       defaultValue: 0,
     },
+    content: {
+      type: DataTypes.TEXT("long"), //lưu chuỗi HTML cực dài
+      allowNull: true,
+    },
   },
   {
     tableName: "product",
     timestamps: true,
-  }
+  },
 );
 
 // Trong model Product

@@ -16,33 +16,47 @@ const Rom = require("../models/Rom");
 // Lấy thông tin các sản phẩm trong landingpage
 exports.getLandingProducts = catchAsync(async (req, res, next) => {
   // Dùng lại getAllProduct logic bằng cách gọi thẳng APIFeaturesSequelize
-  const outstanding = await new APIFeaturesSequelize(Product, { sort: "-average_rating", limit: 30 })
+  const outstanding = await new APIFeaturesSequelize(Product, {
+    sort: "-average_rating",
+    limit: 30,
+  })
     .filter()
     .sort()
     .limitFields()
     .paginate()
     .apply();
 
-  const tablets = await new APIFeaturesSequelize(Product, { categorySlug: "may-tinh-bang", limit: 20 })
+  const tablets = await new APIFeaturesSequelize(Product, {
+    categorySlug: "may-tinh-bang",
+    limit: 20,
+  })
     .filter()
     .sort()
     .limitFields()
     .paginate()
     .apply();
 
-  const laptops = await new APIFeaturesSequelize(Product, { categorySlug: "laptop", limit: 20 })
+  const laptops = await new APIFeaturesSequelize(Product, {
+    categorySlug: "laptop",
+    limit: 20,
+  })
     .filter()
     .sort()
     .limitFields()
     .paginate()
     .apply();
 
-  const phones = await new APIFeaturesSequelize(Product, { categorySlug: "dien-thoai", limit: 20 })
+  const phones = await new APIFeaturesSequelize(Product, {
+    categorySlug: "dien-thoai",
+    limit: 20,
+  })
     .filter()
     .sort()
     .limitFields()
     .paginate()
     .apply();
+
+  console.log("đã lấy xông hêt");
 
   res.status(200).json({
     status: "success",
@@ -59,28 +73,43 @@ exports.getLandingProducts = catchAsync(async (req, res, next) => {
 exports.uploadSingleImage = upload.single("product_image");
 
 // Hàm upload hình ảnh lên Firebase Storage
-const uploadImage = catchAsync(async (file, name) => {
-  const blob = bucket.file(`${name}/${Date.now()}_${file.originalname}`);
+const uploadImage = (file, folderName) => {
+  // Đảm bảo file tồn tại
+  if (!file) return Promise.reject("No file provided");
+
+  const fileName = `${folderName}/${Date.now()}_${file.originalname}`;
+  const blob = bucket.file(fileName);
+
   const blobStream = blob.createWriteStream({
     metadata: {
       contentType: file.mimetype,
     },
+    resumable: false, // Tắt cái này nếu file nhỏ để tránh lỗi quota phức tạp
   });
 
   return new Promise((resolve, reject) => {
+    blobStream.on("error", (err) => {
+      console.error("Upload error:", err);
+      reject(err);
+    });
+
     blobStream.on("finish", async () => {
       try {
-        const imageUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+        // QUAN TRỌNG: Cần await makePublic để chắc chắn quyền được thực thi
         await blob.makePublic();
-        resolve(imageUrl); // Trả về URL hình ảnh đã upload
+
+        // URL chuẩn để truy cập public
+        const imageUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+        resolve(imageUrl);
       } catch (err) {
+        console.error("Make public error:", err);
         reject(err);
       }
     });
-    blobStream.on("error", reject);
+
     blobStream.end(file.buffer);
   });
-});
+};
 
 exports.createProduct = catchAsync(async (req, res, next) => {
   try {
@@ -120,6 +149,7 @@ exports.createProduct = catchAsync(async (req, res, next) => {
       price,
       origin,
       description,
+      content,
       slug,
       category_id,
       brand_id,
@@ -129,7 +159,7 @@ exports.createProduct = catchAsync(async (req, res, next) => {
     // Upload các hình ảnh phụ
     if (productImages.length > 0) {
       productImageUrls = await Promise.all(
-        productImages.map((item) => uploadImage(item, "product_images"))
+        productImages.map((item) => uploadImage(item, "product_images")),
       ); // Upload tất cả hình ảnh phụ
 
       // Lưu các hình ảnh phụ vào bảng Product_Images
@@ -138,8 +168,8 @@ exports.createProduct = catchAsync(async (req, res, next) => {
           Product_Image.create({
             product_id: newProduct.id,
             url: imageUrl,
-          })
-        )
+          }),
+        ),
       );
     }
 
@@ -158,7 +188,6 @@ exports.aliasTopOutstandingProduct = (req, res, next) => {
 };
 
 exports.getAllProduct = catchAsync(async (req, res, next) => {
-
   const features = new APIFeaturesSequelize(Product, req.query)
     .filter()
     .sort()
@@ -278,7 +307,7 @@ exports.updateProduct = catchAsync(async (req, res, next) => {
     // console.log("req.files:", req.files); // Log các tệp đã upload
 
     const { id } = req.params;
-    const { name, price, origin, description, category_id, brand_id } =
+    const { name, price, origin, description, content, category_id, brand_id } =
       req.body;
     const productImageFile = req.files.product_image; // Hình ảnh chính
     const productImages = req.files.product_images || []; // Mảng hình ảnh phụ
@@ -313,7 +342,7 @@ exports.updateProduct = catchAsync(async (req, res, next) => {
       if (oldImage) {
         const imagePath = oldImage.replace(
           "https://storage.googleapis.com/lamba-blog.appspot.com/",
-          ""
+          "",
         );
         await bucket.file(imagePath).delete(); // Xóa hình ảnh cũ trên Firebase
       }
@@ -327,6 +356,7 @@ exports.updateProduct = catchAsync(async (req, res, next) => {
       price,
       origin,
       description,
+      content,
       slug,
       category_id,
       brand_id,
@@ -347,7 +377,7 @@ exports.updateProduct = catchAsync(async (req, res, next) => {
         if (item.url) {
           const imagePath = item.url.replace(
             "https://storage.googleapis.com/lamba-blog.appspot.com/",
-            ""
+            "",
           );
           await bucket.file(imagePath).delete(); // Xóa hình ảnh phụ trên Firebase
           console.log(`Đã xóa hình ảnh phụ: ${imagePath}`);
@@ -366,7 +396,7 @@ exports.updateProduct = catchAsync(async (req, res, next) => {
     // 4. Thêm hình ảnh phụ mới nếu có
     if (productImages.length > 0) {
       productImageUrls = await Promise.all(
-        productImages.map((item) => uploadImage(item, "product_images"))
+        productImages.map((item) => uploadImage(item, "product_images")),
       );
 
       // Lưu các hình ảnh phụ vào bảng Product_Images
@@ -375,8 +405,8 @@ exports.updateProduct = catchAsync(async (req, res, next) => {
           Product_Image.create({
             product_id: updatedProduct.id,
             url: imageUrl,
-          })
-        )
+          }),
+        ),
       );
     }
 
@@ -386,6 +416,7 @@ exports.updateProduct = catchAsync(async (req, res, next) => {
       data: { updatedProduct },
     });
   } catch (err) {
+    console.log(err);
     return next(err); // Xử lý lỗi
   }
 });
@@ -407,7 +438,7 @@ exports.deleteProduct = catchAsync(async (req, res, next) => {
       // Đường dẫn của hình chính
       const imagePath = product.image.replace(
         "https://storage.googleapis.com/lamba-blog.appspot.com/",
-        ""
+        "",
       );
       await bucket.file(imagePath).delete();
       console.log(`Đã xóa hình ảnh chính: ${imagePath}`);
@@ -422,7 +453,7 @@ exports.deleteProduct = catchAsync(async (req, res, next) => {
       if (item.url) {
         const imagePath = item.url.replace(
           "https://storage.googleapis.com/lamba-blog.appspot.com/",
-          ""
+          "",
         );
         // Đường dẫn file của hình phụ
         await bucket.file(imagePath).delete();
