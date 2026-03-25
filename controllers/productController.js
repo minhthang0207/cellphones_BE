@@ -2,6 +2,7 @@ const Product = require("../models/Product");
 const AppError = require("../utils/appError");
 const catchAsync = require("../utils/catchAsync");
 const { toSlug } = require("../utils/utils");
+const { uploadImage } = require("../utils/image");
 const { bucket } = require("../utils/firebaseAdmin");
 const Brand = require("../models/Brand");
 const Product_Category = require("../models/Product_Category");
@@ -72,44 +73,43 @@ exports.getLandingProducts = catchAsync(async (req, res, next) => {
 // upload 1 hình ảnh
 exports.uploadSingleImage = upload.single("product_image");
 
-// Hàm upload hình ảnh lên Firebase Storage
-const uploadImage = (file, folderName) => {
-  // Đảm bảo file tồn tại
-  if (!file) return Promise.reject("No file provided");
+// const uploadImage = (file, folderName) => {
+//   // Đảm bảo file tồn tại
+//   if (!file) return Promise.reject("No file provided");
 
-  const fileName = `${folderName}/${Date.now()}_${file.originalname}`;
-  const blob = bucket.file(fileName);
+//   const fileName = `${folderName}/${Date.now()}_${file.originalname}`;
+//   const blob = bucket.file(fileName);
 
-  const blobStream = blob.createWriteStream({
-    metadata: {
-      contentType: file.mimetype,
-    },
-    resumable: false, // Tắt cái này nếu file nhỏ để tránh lỗi quota phức tạp
-  });
+//   const blobStream = blob.createWriteStream({
+//     metadata: {
+//       contentType: file.mimetype,
+//     },
+//     resumable: false, // Tắt cái này nếu file nhỏ để tránh lỗi quota phức tạp
+//   });
 
-  return new Promise((resolve, reject) => {
-    blobStream.on("error", (err) => {
-      console.error("Upload error:", err);
-      reject(err);
-    });
+//   return new Promise((resolve, reject) => {
+//     blobStream.on("error", (err) => {
+//       console.error("Upload error:", err);
+//       reject(err);
+//     });
 
-    blobStream.on("finish", async () => {
-      try {
-        // QUAN TRỌNG: Cần await makePublic để chắc chắn quyền được thực thi
-        await blob.makePublic();
+//     blobStream.on("finish", async () => {
+//       try {
+//         // Cần await makePublic để chắc chắn quyền được thực thi
+//         await blob.makePublic();
 
-        // URL chuẩn để truy cập public
-        const imageUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
-        resolve(imageUrl);
-      } catch (err) {
-        console.error("Make public error:", err);
-        reject(err);
-      }
-    });
+//         // URL chuẩn để truy cập public
+//         const imageUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+//         resolve(imageUrl);
+//       } catch (err) {
+//         console.error("Make public error:", err);
+//         reject(err);
+//       }
+//     });
 
-    blobStream.end(file.buffer);
-  });
-};
+//     blobStream.end(file.buffer);
+//   });
+// };
 
 exports.createProduct = catchAsync(async (req, res, next) => {
   try {
@@ -139,7 +139,11 @@ exports.createProduct = catchAsync(async (req, res, next) => {
 
     // Upload hình ảnh chính
     if (productImageFile) {
-      productImageUrl = await uploadImage(productImageFile[0], "products");
+      productImageUrl = await uploadImage(
+        productImageFile[0],
+        "products",
+        bucket,
+      );
     }
 
     // Tạo sản phẩm mới
@@ -159,7 +163,9 @@ exports.createProduct = catchAsync(async (req, res, next) => {
     // Upload các hình ảnh phụ
     if (productImages.length > 0) {
       productImageUrls = await Promise.all(
-        productImages.map((item) => uploadImage(item, "product_images")),
+        productImages.map((item) =>
+          uploadImage(item, "product_images", bucket),
+        ),
       ); // Upload tất cả hình ảnh phụ
 
       // Lưu các hình ảnh phụ vào bảng Product_Images
@@ -346,7 +352,11 @@ exports.updateProduct = catchAsync(async (req, res, next) => {
         );
         await bucket.file(imagePath).delete(); // Xóa hình ảnh cũ trên Firebase
       }
-      productImageUrl = await uploadImage(productImageFile[0], "products");
+      productImageUrl = await uploadImage(
+        productImageFile[0],
+        "products",
+        bucket,
+      );
     }
 
     // 2. Cập nhật thông tin sản phẩm
@@ -396,7 +406,9 @@ exports.updateProduct = catchAsync(async (req, res, next) => {
     // 4. Thêm hình ảnh phụ mới nếu có
     if (productImages.length > 0) {
       productImageUrls = await Promise.all(
-        productImages.map((item) => uploadImage(item, "product_images")),
+        productImages.map((item) =>
+          uploadImage(item, "product_images", bucket),
+        ),
       );
 
       // Lưu các hình ảnh phụ vào bảng Product_Images

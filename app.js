@@ -34,6 +34,8 @@ const paymentRouter = require("./routes/paymentRoutes");
 const orderRouter = require("./routes/orderRoutes");
 const reviewRouter = require("./routes/reviewRoutes");
 const chatRouter = require("./routes/chatRoutes");
+const mediaRouter = require("./routes/mediaRoutes");
+const mediaFoldersRouter = require("./routes/mediaFoldersRoutes");
 
 const paymentController = require("./controllers/paymentController");
 
@@ -201,6 +203,10 @@ app.use("/api/roms", romRouter);
 app.use("/api/colors", colorRouter);
 app.use("/api/product_categories", productCategoryRouter);
 
+// folders
+app.use("/api/folders", mediaFoldersRouter);
+// media
+app.use("/api/media", mediaRouter);
 // product
 app.use("/api/products", productRouter);
 // review
