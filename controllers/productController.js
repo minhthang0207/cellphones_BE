@@ -389,7 +389,7 @@ exports.updateProduct = catchAsync(async (req, res, next) => {
             "https://storage.googleapis.com/lamba-blog.appspot.com/",
             "",
           );
-          await bucket.file(imagePath).delete(); // Xóa hình ảnh phụ trên Firebase
+          await bucket.file(decodeURIComponent(imagePath)).delete(); // Xóa hình ảnh phụ trên Firebase
           console.log(`Đã xóa hình ảnh phụ: ${imagePath}`);
         }
       }
